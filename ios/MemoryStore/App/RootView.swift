@@ -6,15 +6,7 @@ struct RootView: View {
     var body: some View {
         ZStack {
             MSTheme.background.ignoresSafeArea()
-            switch app.route {
-            case .launch:
-                ProgressView()
-                    .tint(MSTheme.primary)
-            case .login:
-                LoginView()
-            case .main:
-                MainTabView()
-            }
+            MainTabView()
 
             if let toast = app.toast {
                 VStack {
@@ -29,6 +21,18 @@ struct RootView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 .animation(.easeInOut(duration: 0.25), value: app.toast)
+            }
+        }
+        .alert("开始同步？", isPresented: $app.showSyncConfirm) {
+            Button("暂不") { app.deferSync() }
+            Button("开始同步") { app.confirmStartSync() }
+        } message: {
+            Text(app.syncConfirmMessage)
+        }
+        .sheet(isPresented: $app.showLoginSheet) {
+            NavigationStack {
+                LoginView(isPresentedModally: true)
+                    .environmentObject(app)
             }
         }
     }

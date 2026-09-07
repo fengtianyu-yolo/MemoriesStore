@@ -2,6 +2,9 @@ import SwiftUI
 
 struct LoginView: View {
     @EnvironmentObject private var app: AppModel
+    @Environment(\.dismiss) private var dismiss
+    var isPresentedModally: Bool = false
+
     @State private var isRegister = false
     @State private var username = ""
     @State private var password = ""
@@ -18,11 +21,11 @@ struct LoginView: View {
                     Text("MemoryStore")
                         .font(MSTheme.brandFont)
                         .foregroundStyle(MSTheme.text)
-                    Text(isRegister ? "创建账号，备份到你的私人相册" : "登录后自动备份照片到家中设备")
+                    Text(isRegister ? "创建账号，备份到你的私人相册" : "登录后同步云端相册并备份本机照片")
                         .font(MSTheme.bodyFont)
                         .foregroundStyle(MSTheme.muted)
                 }
-                .padding(.top, 48)
+                .padding(.top, isPresentedModally ? 12 : 48)
                 .opacity(appear ? 1 : 0)
                 .offset(y: appear ? 0 : 12)
 
@@ -67,14 +70,19 @@ struct LoginView: View {
                 .font(MSTheme.captionFont)
                 .foregroundStyle(MSTheme.accent)
 
-                Text("上传成功后保留本机原片并标记已备份；可在回忆页手动清理。请确保服务端地址可访问。")
+                Text("登录成功后会自动刷新云端列表，并与本机相册合并。")
                     .font(MSTheme.captionFont)
                     .foregroundStyle(MSTheme.muted)
                     .padding(.top, 8)
 
-                Text("服务端：\(app.config.baseURL.absoluteString)")
+                Text("服务端：\(app.activeBaseURL.absoluteString)")
                     .font(.system(.caption2, design: .monospaced))
                     .foregroundStyle(MSTheme.muted)
+                if app.usingLANFastPath {
+                    Text("局域网快传已启用")
+                        .font(MSTheme.captionFont)
+                        .foregroundStyle(MSTheme.accent)
+                }
             }
             .padding(24)
         }
@@ -86,6 +94,16 @@ struct LoginView: View {
             )
             .ignoresSafeArea()
         )
+        .toolbar {
+            if isPresentedModally {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("关闭") {
+                        app.showLoginSheet = false
+                        dismiss()
+                    }
+                }
+            }
+        }
         .onAppear {
             withAnimation(.easeOut(duration: 0.45)) { appear = true }
         }
@@ -120,6 +138,9 @@ struct LoginView: View {
                     try await app.auth.login(username: username.trimmingCharacters(in: .whitespaces), password: password)
                 }
                 await app.didLogin()
+                if isPresentedModally {
+                    dismiss()
+                }
             } catch {
                 errorText = error.localizedDescription
             }

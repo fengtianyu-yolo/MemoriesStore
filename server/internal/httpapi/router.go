@@ -11,6 +11,7 @@ func NewRouter(d *handlers.Deps) *gin.Engine {
 	r.Use(gin.Recovery(), gin.Logger())
 
 	r.GET("/health", d.Health)
+	r.GET("/api/v1/network/discovery", d.NetworkDiscovery)
 
 	v1 := r.Group("/api/v1")
 	{

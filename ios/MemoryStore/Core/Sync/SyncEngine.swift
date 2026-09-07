@@ -88,8 +88,8 @@ final class SyncEngine: ObservableObject {
                 try? await Task.sleep(nanoseconds: 500_000_000)
                 continue
             }
-            if config.wifiOnlyUpload && !network.isWifi {
-                statusText = "等待 Wi‑Fi…"
+            if config.wifiOnlyUpload && !network.allowsWifiOnlyUpload {
+                statusText = network.isCellular || network.isExpensive ? "等待 Wi‑Fi（当前蜂窝）…" : "等待 Wi‑Fi…"
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 continue
             }
@@ -343,6 +343,10 @@ final class SyncEngine: ObservableObject {
 
     private func upload(_ asset: inout SyncAsset) async throws {
         statusText = "上传中…"
+        asset.status = .uploading
+        asset.updatedAt = Date()
+        await store.update(asset)
+
         guard let ph = fetchAsset(asset.phAssetID) else {
             if asset.remoteMediaID != nil {
                 asset.phAssetID = ""
@@ -415,7 +419,6 @@ final class SyncEngine: ObservableObject {
             throw APIError.message("缺少 upload_id")
         }
         asset.uploadID = uploadID
-        asset.status = .uploading
         asset.resumeOffset = initRes.resume_from ?? 0
         await store.update(asset)
 
@@ -426,7 +429,7 @@ final class SyncEngine: ObservableObject {
 
         while offset < exported.byteSize {
             if Task.isCancelled { return }
-            if config.wifiOnlyUpload && !network.isWifi {
+            if config.wifiOnlyUpload && !network.allowsWifiOnlyUpload {
                 throw APIError.message("已离开 Wi‑Fi，上传暂停")
             }
             let end = min(offset + Int64(config.chunkSize), exported.byteSize)
@@ -437,9 +440,9 @@ final class SyncEngine: ObservableObject {
             asset.resumeOffset = offset
             await store.update(asset)
             statusText = String(format: "上传 %.0f%%", Double(offset) / Double(exported.byteSize) * 100)
-            if length >= config.chunkSize {
-                await Task.yield()
-            }
+            // 分片间稍作停顿，降低 FRP 链路压力
+            try? await Task.sleep(nanoseconds: 80_000_000)
+            await Task.yield()
         }
 
         struct CompleteResp: Decodable {

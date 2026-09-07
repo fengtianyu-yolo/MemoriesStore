@@ -11,9 +11,11 @@ import (
 )
 
 type Service struct {
-	DB      *sql.DB
-	Storage *storage.Engine
-	Media   *repo.MediaRepo
+	DB            *sql.DB
+	Storage       *storage.Engine
+	Media         *repo.MediaRepo
+	Listen        string
+	PublicBaseURL string
 }
 
 type Health struct {

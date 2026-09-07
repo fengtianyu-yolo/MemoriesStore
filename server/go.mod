@@ -1,6 +1,6 @@
 module github.com/fengtianyu/memorystore/server
 
-go 1.26.0
+go 1.25.0
 
 require (
 	github.com/gin-gonic/gin v1.12.0

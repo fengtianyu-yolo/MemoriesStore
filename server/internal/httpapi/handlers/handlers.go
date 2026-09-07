@@ -464,6 +464,11 @@ func (d *Deps) Health(c *gin.Context) {
 	c.JSON(code, h)
 }
 
+// NetworkDiscovery 公开接口：返回服务局域网 IPv4 与监听端口，供客户端快传探测。
+func (d *Deps) NetworkDiscovery(c *gin.Context) {
+	respond.OK(c, d.System.NetworkDiscovery())
+}
+
 func (d *Deps) Storage(c *gin.Context) {
 	u := middleware.User(c)
 	info, err := d.System.StorageInfo(c.Request.Context(), u.UserID)

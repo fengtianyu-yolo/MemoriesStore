@@ -131,14 +131,14 @@ struct TimelineView: View {
         case (.editing, .remoteOnly):
             return "本机已清理、仅保留在服务器上的项会出现在这里"
         default:
-            return "连接 Wi‑Fi 后，同步页会自动备份照片"
+            return "打开 App 将优先展示本机相册；登录后会与云端合并"
         }
     }
 
     var body: some View {
         NavigationStack {
             Group {
-                if displayed.isEmpty && app.gallery.isLoading {
+                if displayed.isEmpty && (app.gallery.isLoadingLocal || app.gallery.isLoading) {
                     ProgressView("加载中…").tint(MSTheme.accent)
                 } else if displayed.isEmpty {
                     ContentUnavailableView(
@@ -159,7 +159,7 @@ struct TimelineView: View {
                         .padding(.bottom, 24)
                     }
                     .refreshable {
-                        await app.gallery.reload()
+                        await app.gallery.reload(authenticated: app.auth.isAuthenticated)
                     }
                 }
             }
@@ -188,9 +188,6 @@ struct TimelineView: View {
             .fullScreenCover(item: $selected) { item in
                 ViewerView(entries: app.gallery.timeline, startID: item.id)
                     .environmentObject(app)
-            }
-            .task {
-                await app.gallery.reload()
             }
             .onReceive(app.syncEngine.objectWillChange) { _ in
                 Task { await app.gallery.rebuildTimeline() }
@@ -539,17 +536,26 @@ struct BadgeView: View {
     let badge: MediaBadge
 
     var body: some View {
-        Image(systemName: icon)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.white)
-            .padding(5)
-            .background(color.opacity(0.85), in: Circle())
-            .accessibilityLabel(label)
+        Group {
+            if badge == .processing {
+                ProgressView()
+                    .controlSize(.mini)
+                    .tint(.white)
+            } else {
+                Image(systemName: icon)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+            }
+        }
+        .frame(width: 22, height: 22)
+        .background(color.opacity(0.85), in: Circle())
+        .accessibilityLabel(label)
     }
 
     private var icon: String {
         switch badge {
         case .pendingUpload: return "arrow.up.circle.fill"
+        case .processing: return "arrow.triangle.2.circlepath"
         case .backedUp: return "checkmark.icloud.fill"
         case .remoteOnly: return "arrow.down.circle.fill"
         }
@@ -558,6 +564,7 @@ struct BadgeView: View {
     private var color: Color {
         switch badge {
         case .pendingUpload: return Color.orange
+        case .processing: return Color.indigo
         case .backedUp: return MSTheme.accent
         case .remoteOnly: return Color.blue
         }
@@ -566,6 +573,7 @@ struct BadgeView: View {
     private var label: String {
         switch badge {
         case .pendingUpload: return "待上传"
+        case .processing: return "处理中"
         case .backedUp: return "已备份"
         case .remoteOnly: return "可下载"
         }
@@ -584,7 +592,8 @@ struct TimelineThumbView: View {
                 localFailed = true
             }
         } else if let mid = entry.remoteMediaID {
-            AuthenticatedImage(path: "/api/v1/media/\(mid)/derivatives/thumb_md", api: api)
+            // 列表用小缩略图，避免拉原图 / 大图派生
+            AuthenticatedImage(path: "/api/v1/media/\(mid)/derivatives/thumb_sm", api: api)
         } else {
             Rectangle().fill(MSTheme.border)
                 .overlay(Image(systemName: "photo").foregroundStyle(MSTheme.muted))
@@ -609,7 +618,10 @@ struct LocalAssetThumbnail: View {
         }
         .task(id: phAssetID) {
             image = nil
-            if let img = await LocalMediaImageLoader.thumbnail(phAssetID: phAssetID) {
+            // 仅请求列表尺寸缩略图，不解码原图；默认不拉 iCloud
+            if let img = await LocalMediaImageLoader.thumbnail(phAssetID: phAssetID, allowNetwork: false) {
+                image = img
+            } else if let img = await LocalMediaImageLoader.thumbnail(phAssetID: phAssetID, allowNetwork: true) {
                 image = img
             } else {
                 onFailed?()

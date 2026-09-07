@@ -14,7 +14,8 @@ struct AppConfig: Sendable {
         let url = URL(string: ProcessInfo.processInfo.environment["MEMORYSTORE_BASE_URL"] ?? "http://120.48.22.80:10002")!
         return AppConfig(
             baseURL: url,
-            chunkSize: 8 * 1024 * 1024,
+            // FRP 穿透下 8MB 分片易触发连接中断，改用 1MB 更稳
+            chunkSize: 1 * 1024 * 1024,
             maxUploadConcurrency: 1,
             mediaCacheLimitBytes: 2 * 1024 * 1024 * 1024,
             wifiOnlyUpload: true,

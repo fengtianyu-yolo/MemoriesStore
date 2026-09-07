@@ -4,12 +4,26 @@ import UIKit
 
 /// 从系统相册读取缩略图 / 原图（优先本机资源，必要时再拉 iCloud）。
 enum LocalMediaImageLoader {
-    static func thumbnail(phAssetID: String, targetSize: CGSize = CGSize(width: 300, height: 300)) async -> UIImage? {
+    /// 列表网格用：按屏宽约 1/3 cell，乘 scale，避免解码原图
+    static var listThumbnailPixelSize: CGSize {
+        let sideInset: CGFloat = 40
+        let spacing: CGFloat = 8
+        let cell = max(80, (UIScreen.main.bounds.width - sideInset - spacing) / 3)
+        let px = cell * UIScreen.main.scale
+        return CGSize(width: px, height: px)
+    }
+
+    static func thumbnail(
+        phAssetID: String,
+        targetSize: CGSize = listThumbnailPixelSize,
+        allowNetwork: Bool = false
+    ) async -> UIImage? {
         guard let asset = fetchAsset(phAssetID) else { return nil }
-        if let img = await requestThumbnail(asset, targetSize: targetSize, networkAccess: false) {
+        if let img = await requestThumbnail(asset, targetSize: targetSize, networkAccess: false, fast: true) {
             return img
         }
-        return await requestThumbnail(asset, targetSize: targetSize, networkAccess: true)
+        guard allowNetwork else { return nil }
+        return await requestThumbnail(asset, targetSize: targetSize, networkAccess: true, fast: true)
     }
 
     /// 返回展示用 UIImage 与原始字节（供 EXIF）；失败返回 nil。
@@ -27,13 +41,15 @@ enum LocalMediaImageLoader {
     private static func requestThumbnail(
         _ asset: PHAsset,
         targetSize: CGSize,
-        networkAccess: Bool
+        networkAccess: Bool,
+        fast: Bool
     ) async -> UIImage? {
         await withCheckedContinuation { cont in
             let opts = PHImageRequestOptions()
-            opts.deliveryMode = .opportunistic
+            opts.deliveryMode = fast ? .fastFormat : .opportunistic
             opts.resizeMode = .fast
             opts.isNetworkAccessAllowed = networkAccess
+            opts.isSynchronous = false
             var resumed = false
             PHImageManager.default().requestImage(
                 for: asset,
@@ -42,7 +58,8 @@ enum LocalMediaImageLoader {
                 options: opts
             ) { img, info in
                 let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if degraded, img != nil { return }
+                // opportunistic 可忽略中间 degraded；fastFormat 通常一次回调
+                if !fast, degraded, img != nil { return }
                 guard !resumed else { return }
                 resumed = true
                 cont.resume(returning: img)

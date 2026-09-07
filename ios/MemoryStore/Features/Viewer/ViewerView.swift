@@ -55,6 +55,8 @@ struct ViewerView: View {
     @State private var currentID: String
     @State private var busy = false
     @State private var showStoryEditor = false
+    @State private var showActions = false
+    @State private var showNoActionAlert = false
 
     init(entries: [TimelineEntry], startID: String) {
         self.entries = entries
@@ -72,6 +74,12 @@ struct ViewerView: View {
         return "\(idx + 1)/\(list.count)"
     }
 
+    private var canEditStory: Bool { current?.remoteMediaID != nil }
+    private var canSaveToLibrary: Bool {
+        guard let cur = current else { return false }
+        return cur.canDownload && cur.remoteMediaID != nil
+    }
+
     var body: some View {
         ZStack {
             TabView(selection: $currentID) {
@@ -83,45 +91,66 @@ struct ViewerView: View {
             .tabViewStyle(.page(indexDisplayMode: .never))
             .ignoresSafeArea()
 
-            VStack {
-                HStack {
+            // 顶栏单独叠层，避免被分页 TabView 吞掉点击；空白区域不拦截手势
+            VStack(spacing: 0) {
+                HStack(spacing: 12) {
                     Button { dismiss() } label: {
                         Image(systemName: "xmark")
                             .font(.body.weight(.semibold))
                             .foregroundStyle(chromeForeground)
-                            .padding(12)
+                            .frame(width: 44, height: 44)
                             .background(chromeBackground, in: Circle())
+                            .contentShape(Circle())
                     }
                     .buttonStyle(.plain)
 
-                    Spacer()
+                    Spacer(minLength: 0)
                     Text(currentIndexLabel)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(chromeForeground)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(chromeBackground, in: Capsule())
-                    Spacer()
+                    Spacer(minLength: 0)
 
-                    Menu {
-                        if current?.remoteMediaID != nil {
-                            Button("编辑故事") { showStoryEditor = true }
-                        }
-                        if let cur = current, cur.canDownload, let mid = cur.remoteMediaID {
-                            Button("保存到相册") { Task { await save(mid) } }
+                    Button {
+                        if canEditStory || canSaveToLibrary {
+                            showActions = true
+                        } else {
+                            showNoActionAlert = true
                         }
                     } label: {
                         Image(systemName: "ellipsis")
                             .font(.body.weight(.semibold))
                             .foregroundStyle(chromeForeground)
-                            .padding(12)
+                            .frame(width: 44, height: 44)
                             .background(chromeBackground, in: Circle())
+                            .contentShape(Circle())
                     }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
-                Spacer()
+                Spacer(minLength: 0)
+                    .allowsHitTesting(false)
             }
+            .zIndex(10)
+        }
+        .confirmationDialog("照片操作", isPresented: $showActions, titleVisibility: .visible) {
+            if canEditStory {
+                Button("编辑故事") { showStoryEditor = true }
+            }
+            if canSaveToLibrary, let mid = current?.remoteMediaID {
+                Button("保存到相册") { Task { await save(mid) } }
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("选择要执行的操作")
+        }
+        .alert("暂无可用操作", isPresented: $showNoActionAlert) {
+            Button("好的", role: .cancel) {}
+        } message: {
+            Text("该项尚未上传到云端。上传完成后可编辑故事；仅云端项可保存回相册。")
         }
         .sheet(isPresented: $showStoryEditor) {
             if let mid = current?.remoteMediaID {

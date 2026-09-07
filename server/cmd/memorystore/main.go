@@ -69,7 +69,10 @@ func main() {
 	mediaSvc := &media.Service{Media: mediaRepo, Derivatives: derivRepo, Storage: eng, Jobs: jobRepo}
 	shareSvc := &share.Service{Shares: shareRepo, Media: mediaRepo, Cfg: cfg.Share, BaseURL: cfg.Server.PublicBaseURL}
 	derivSvc := &derivative.Service{Media: mediaRepo, Derivatives: derivRepo, Storage: eng, Cfg: cfg.Derivative}
-	sysSvc := &system.Service{DB: sqlDB, Storage: eng, Media: mediaRepo}
+	sysSvc := &system.Service{
+		DB: sqlDB, Storage: eng, Media: mediaRepo,
+		Listen: cfg.Server.Listen, PublicBaseURL: cfg.Server.PublicBaseURL,
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

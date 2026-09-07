@@ -30,15 +30,32 @@ enum APIError: LocalizedError {
 }
 
 actor APIClient {
-    let baseURL: URL
+    private(set) var baseURL: URL
     let tokenStore: TokenStore
     private let session: URLSession
 
-    init(baseURL: URL, tokenStore: TokenStore, session: URLSession = .shared) {
+    init(baseURL: URL, tokenStore: TokenStore, session: URLSession? = nil) {
         self.baseURL = baseURL
         self.tokenStore = tokenStore
-        self.session = session
+        if let session {
+            self.session = session
+        } else {
+            let cfg = URLSessionConfiguration.default
+            cfg.waitsForConnectivity = true
+            cfg.timeoutIntervalForRequest = 120
+            cfg.timeoutIntervalForResource = 600
+            cfg.httpMaximumConnectionsPerHost = 2
+            // 避免系统对大 body 过度缓冲导致 FRP 链路被掐断
+            cfg.requestCachePolicy = .reloadIgnoringLocalCacheData
+            self.session = URLSession(configuration: cfg)
+        }
     }
+
+    func updateBaseURL(_ url: URL) {
+        baseURL = url
+    }
+
+    func currentBaseURL() -> URL { baseURL }
 
     func request<T: Decodable>(
         _ method: String,
@@ -73,17 +90,52 @@ actor APIClient {
     }
 
     func putChunk(path: String, offset: Int64, data: Data) async throws -> ChunkResponse {
-        try await request(
-            "PUT",
-            path: path,
-            body: nil as String?,
-            auth: true,
-            headers: [
-                "X-Chunk-Offset": "\(offset)",
-                "Content-Type": "application/octet-stream",
-            ],
-            rawBody: data
-        )
+        var lastError: Error?
+        for attempt in 1...5 {
+            do {
+                return try await request(
+                    "PUT",
+                    path: path,
+                    body: nil as String?,
+                    auth: true,
+                    headers: [
+                        "X-Chunk-Offset": "\(offset)",
+                        "Content-Type": "application/octet-stream",
+                    ],
+                    rawBody: data
+                )
+            } catch {
+                lastError = error
+                guard Self.isTransientNetworkError(error), attempt < 5 else { throw error }
+                // 指数退避：0.5s / 1s / 2s / 4s
+                let ns = UInt64(pow(2.0, Double(attempt - 1)) * 500_000_000)
+                try? await Task.sleep(nanoseconds: ns)
+            }
+        }
+        throw lastError ?? APIError.message("分片上传失败")
+    }
+
+    private static func isTransientNetworkError(_ error: Error) -> Bool {
+        let ns = error as NSError
+        if ns.domain == NSURLErrorDomain {
+            switch ns.code {
+            case NSURLErrorTimedOut,
+                 NSURLErrorNetworkConnectionLost,
+                 NSURLErrorNotConnectedToInternet,
+                 NSURLErrorCannotConnectToHost,
+                 NSURLErrorDNSLookupFailed,
+                 NSURLErrorInternationalRoamingOff,
+                 NSURLErrorCallIsActive,
+                 NSURLErrorDataNotAllowed:
+                return true
+            default:
+                break
+            }
+        }
+        if let underlying = ns.userInfo[NSUnderlyingErrorKey] as? NSError {
+            return isTransientNetworkError(underlying)
+        }
+        return false
     }
 
     private func request<T: Decodable>(
@@ -114,15 +166,14 @@ actor APIClient {
         if path.hasPrefix("http") {
             url = URL(string: path)!
         } else {
-            url = baseURL.appendingPathComponent(path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
-            // appendingPathComponent messes query; build manually
             let trimmed = path.hasPrefix("/") ? String(path.dropFirst()) : path
             url = URL(string: baseURL.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/" + trimmed)!
         }
 
         var req = URLRequest(url: url)
         req.httpMethod = method
-        req.timeoutInterval = method == "PUT" ? 600 : 60
+        // 分片上传给足时间；普通请求 60s
+        req.timeoutInterval = (method == "PUT" && rawBody != nil) ? 180 : 60
         for (k, v) in headers { req.setValue(v, forHTTPHeaderField: k) }
 
         if auth, let token = tokenStore.accessToken {
@@ -168,10 +219,10 @@ actor APIClient {
             let refresh_token: String
             let expires_at: String?
         }
-        // avoid recursion with retryOn401 false
         var url = URL(string: baseURL.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/api/v1/auth/refresh")!
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
+        req.timeoutInterval = 60
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONEncoder.api.encode(Body(refresh_token: refresh))
         let (data, resp) = try await session.data(for: req)

@@ -6,10 +6,39 @@ struct SyncStatusView: View {
     var body: some View {
         NavigationStack {
             List {
+                if app.usingLANFastPath {
+                    Section {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "bolt.horizontal.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(MSTheme.accent)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("处于局域网快传模式")
+                                    .font(MSTheme.bodyFont.weight(.semibold))
+                                    .foregroundStyle(MSTheme.text)
+                                Text("当前经局域网直连服务器，上传与浏览不走公网。\n\(app.activeBaseURL.absoluteString)")
+                                    .font(MSTheme.captionFont)
+                                    .foregroundStyle(MSTheme.muted)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
                 Section("状态") {
                     LabeledContent("引擎", value: app.syncEngine.isPaused ? "暂停" : (app.syncEngine.isRunning ? "运行中" : "停止"))
                     LabeledContent("当前", value: app.syncEngine.statusText)
-                    LabeledContent("网络", value: app.network.isWifi ? "Wi‑Fi" : (app.network.isConnected ? "蜂窝/其他" : "离线"))
+                    LabeledContent("网络", value: {
+                        if app.network.isWifi && !app.network.isCellular { return "Wi‑Fi" }
+                        if app.network.isCellular { return "蜂窝" }
+                        if app.network.isConnected { return "其他" }
+                        return "离线"
+                    }())
+                    LabeledContent("访问通道", value: app.usingLANFastPath ? "局域网快传" : "公网")
+                    if app.network.isCellular || app.network.isExpensive {
+                        Text("当前为蜂窝/昂贵网络，自动上传已暂停（需 Wi‑Fi）")
+                            .font(MSTheme.captionFont)
+                            .foregroundStyle(.orange)
+                    }
                     if app.syncEngine.scanProgress > 0, app.syncEngine.scanProgress < 1 {
                         ProgressView(value: app.syncEngine.scanProgress)
                     }
@@ -31,13 +60,24 @@ struct SyncStatusView: View {
                     }
                 }
                 Section {
-                    Button(app.syncEngine.isPaused ? "恢复同步" : "暂停同步") {
-                        app.syncEngine.togglePause()
+                    if !app.auth.isAuthenticated {
+                        Button("去登录") {
+                            app.presentLogin()
+                        }
+                    } else if app.syncEngine.isRunning {
+                        Button(app.syncEngine.isPaused ? "恢复同步" : "暂停同步") {
+                            app.syncEngine.togglePause()
+                        }
+                    } else {
+                        Button("开始同步") {
+                            app.startSyncManually()
+                        }
                     }
                     Button("立即扫描相册") {
                         Task { await app.syncEngine.scanLibrary() }
                     }
-                    Text("首次安装若相册很大，会分批扫描并限速哈希/上传，可随时在本页暂停。")
+                    .disabled(!app.auth.isAuthenticated)
+                    Text("启动后会先展示本机相册；登录后与云端合并。可同步时会询问是否开始备份。")
                         .font(MSTheme.captionFont)
                         .foregroundStyle(MSTheme.muted)
                 }
@@ -55,12 +95,24 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section("账号") {
-                    if let u = app.auth.user {
+                    if app.auth.isAuthenticated, let u = app.auth.user {
                         LabeledContent("用户", value: u.display_name)
                         LabeledContent("用户名", value: u.username)
-                    }
-                    Button("退出登录", role: .destructive) {
-                        Task { await app.logout() }
+                        Button("退出登录", role: .destructive) {
+                            Task { await app.logout() }
+                        }
+                    } else {
+                        Button {
+                            app.presentLogin()
+                        } label: {
+                            HStack {
+                                Text("去登录")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(MSTheme.muted)
+                            }
+                        }
                     }
                 }
                 Section {
@@ -80,7 +132,13 @@ struct SettingsView: View {
                         .font(MSTheme.captionFont)
                 }
                 Section("服务") {
-                    LabeledContent("地址", value: app.config.baseURL.absoluteString)
+                    LabeledContent("访问通道", value: app.usingLANFastPath ? "局域网快传" : "公网")
+                    LabeledContent("当前地址", value: app.activeBaseURL.absoluteString)
+                    if app.usingLANFastPath {
+                        Text("公网入口：\(app.publicBaseURL.absoluteString)")
+                            .font(MSTheme.captionFont)
+                            .foregroundStyle(MSTheme.muted)
+                    }
                     Text("仅 Wi‑Fi 自动上传：\(app.config.wifiOnlyUpload ? "开" : "关")")
                         .font(MSTheme.captionFont)
                         .foregroundStyle(MSTheme.muted)

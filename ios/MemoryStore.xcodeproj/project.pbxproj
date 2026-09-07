@@ -24,6 +24,7 @@
 		C010EE042DF454FBE818E768 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C13C43C1735130EF8115A26 /* AppModel.swift */; };
 		C74726C50B9D4CC75E13C77D /* ViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDCC1B9BCCCC8656FCCE3B0 /* ViewerView.swift */; };
 		C866A1802A96BEF5085E9171 /* PhotoEXIFReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C0FB0CD02A65C05F04EAC2 /* PhotoEXIFReader.swift */; };
+		CBBFB126FC382EF94FB97C67 /* LANEndpointResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 580B1A71FC7DF65ABADB2E42 /* LANEndpointResolver.swift */; };
 		D65DEC141F4C0525F082E65A /* LocalMediaImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DBF0CA8AD8B5EA976548D28 /* LocalMediaImageLoader.swift */; };
 		D8E6BD68310326D58266EE97 /* SyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70DED826B4D3FE50231E240 /* SyncEngine.swift */; };
 		E49AA689CDC2C09570061662 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80ADC351730BCF933B915B20 /* LoginView.swift */; };
@@ -40,10 +41,11 @@
 		1D683573B9D61CED2DE458EA /* GalleryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryService.swift; sourceTree = "<group>"; };
 		2C13C43C1735130EF8115A26 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		32291E7AC79767A2FFCB8319 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		580B1A71FC7DF65ABADB2E42 /* LANEndpointResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LANEndpointResolver.swift; sourceTree = "<group>"; };
 		6B0D825AD3D71C527EC5D1D0 /* PhotosGateway.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotosGateway.swift; sourceTree = "<group>"; };
 		7EC42098C3F2BBC3D8F3C334 /* ViewerPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewerPreferences.swift; sourceTree = "<group>"; };
 		80ADC351730BCF933B915B20 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
-		9412E9D87856543D4730E665 /* MemoryStore.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MemoryStore.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9412E9D87856543D4730E665 /* MemoryStore.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MemoryStore.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9C911809251A9CB14F02B7A5 /* SyncStatusViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusViews.swift; sourceTree = "<group>"; };
 		A071BCD0EEBD6CB1FF180501 /* MSTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MSTheme.swift; sourceTree = "<group>"; };
 		A73E9C44F94CA36FFC714211 /* TimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineView.swift; sourceTree = "<group>"; };
@@ -164,6 +166,7 @@
 			children = (
 				D94787F8527A7A8FF4019B85 /* APIClient.swift */,
 				C48791E3FEE412B13628B93A /* AppConfig.swift */,
+				580B1A71FC7DF65ABADB2E42 /* LANEndpointResolver.swift */,
 			);
 			path = Networking;
 			sourceTree = "<group>";
@@ -253,6 +256,7 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					871C87E20E3C01B28BA14622 = {
+						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -297,6 +301,7 @@
 				C010EE042DF454FBE818E768 /* AppModel.swift in Sources */,
 				898D0996F7D47F58DAD077FF /* AuthService.swift in Sources */,
 				82DD46018912E9A903C17C94 /* GalleryService.swift in Sources */,
+				CBBFB126FC382EF94FB97C67 /* LANEndpointResolver.swift in Sources */,
 				D65DEC141F4C0525F082E65A /* LocalMediaImageLoader.swift in Sources */,
 				E49AA689CDC2C09570061662 /* LoginView.swift in Sources */,
 				A62FE801A803ED20BC3034F8 /* MSTheme.swift in Sources */,
@@ -385,14 +390,14 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8TCLU34FZ7;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = MemoryStore/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.memoriesstore.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.memorystore.app;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -472,14 +477,14 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8TCLU34FZ7;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = MemoryStore/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.memoriesstore.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.memorystore.app;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

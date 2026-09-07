@@ -36,6 +36,8 @@ enum SyncAssetStatus: String, Codable, Sendable {
 
 enum MediaBadge: String, Sendable, Hashable {
     case pendingUpload
+    /// 正在哈希 / 上传等处理中
+    case processing
     case backedUp
     case remoteOnly
 }
@@ -64,7 +66,9 @@ struct SyncAsset: Codable, Identifiable, Sendable {
             return .backedUp
         case .remoteOnly:
             return .remoteOnly
-        case .discovered, .hashing, .pendingUpload, .uploading, .failed, .waitingLocalResource:
+        case .hashing, .uploading:
+            return .processing
+        case .discovered, .pendingUpload, .failed, .waitingLocalResource:
             return .pendingUpload
         }
     }
@@ -114,7 +118,17 @@ actor SyncIndexStore {
             return
         }
         let list = (try? JSONDecoder().decode([SyncAsset].self, from: data)) ?? []
-        assets = Dictionary(uniqueKeysWithValues: list.map { ($0.id, $0) })
+        var map: [String: SyncAsset] = [:]
+        map.reserveCapacity(list.count)
+        for asset in list {
+            if let existing = map[asset.id] {
+                // 同 id 重复时保留更新时间较新者
+                map[asset.id] = existing.updatedAt >= asset.updatedAt ? existing : asset
+            } else {
+                map[asset.id] = asset
+            }
+        }
+        assets = map
         rebuildPhIndex()
     }
 
