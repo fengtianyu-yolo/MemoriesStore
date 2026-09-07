@@ -2,6 +2,12 @@
 # MemoryStore 服务端启动脚本
 set -euo pipefail
 
+# x/crypto 等依赖要求 Go >= 1.26；本机若只有 1.25，自动下载工具链
+export PATH="/usr/local/go/bin:/opt/homebrew/bin:${PATH:-}"
+export GOPROXY="${GOPROXY:-https://goproxy.cn,direct}"
+export GOSUMDB="${GOSUMDB:-sum.golang.google.cn}"
+export GOTOOLCHAIN="${GOTOOLCHAIN:-go1.26.0}"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
