@@ -1,0 +1,6 @@
+run/
+bin/
+data/
+*.db
+*.db-*
+.DS_Store

@@ -1,0 +1,22 @@
+.DS_Store
+**/.DS_Store
+*.xcuserstate
+**/xcuserdata/
+*.bak
+*.bak.*
+
+# server runtime / build artifacts
+server/data/
+server/run/
+server/bin/
+server/*.bak
+server/configs/*.bak*
+
+# Go
+server/vendor/
+
+# iOS
+ios/MemoryStore.xcodeproj/xcuserdata/
+ios/MemoryStore.xcodeproj/project.xcworkspace/xcuserdata/
+ios/DerivedData/
+ios/build/

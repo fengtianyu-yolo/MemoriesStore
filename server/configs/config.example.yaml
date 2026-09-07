@@ -1,0 +1,35 @@
+server:
+  # 真机联调需监听 0.0.0.0，仅 127.0.0.1 时局域网设备连不上
+  listen: "0.0.0.0:10002"
+  # 分享链接等对外地址，填 Mac 局域网 IP
+  public_base_url: "http://120.48.22.80:10002"
+
+data:
+  # 元数据（SQLite、日志），建议放本机磁盘
+  root: "./data"
+  # 照片/视频原片与派生图；可指向外接硬盘。留空则与 root 相同。
+  # 例: "/Volumes/MemoryStore"
+  media_root: "/Volumes/Library/MemoriesStore"
+
+auth:
+  register_mode: "open"       # open | invite | closed
+  access_token_ttl_hours: 168
+  refresh_token_ttl_days: 30
+  password_min_length: 8
+  admin_token: ""
+
+sms:
+  enabled: false
+
+upload:
+  max_bytes: 5368709120
+  chunk_size_hint: 8388608
+  session_ttl_hours: 24
+
+derivative:
+  thumb_sm: 320
+  thumb_md: 1280
+  worker_concurrency: 2
+
+share:
+  default_ttl_days: 7
