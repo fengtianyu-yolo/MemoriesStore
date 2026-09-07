@@ -7,8 +7,8 @@ PID_FILE="$ROOT_DIR/run/memorystore.pid"
 TIMEOUT_SEC="${MEMORYSTORE_STOP_TIMEOUT:-15}"
 
 if [[ ! -f "$PID_FILE" ]]; then
-  # 兜底：按进程名查找（非本脚本启动的实例）
-  pids="$(pgrep -f '[/]bin/memorystore' 2>/dev/null || true)"
+  # 兜底：按进程名查找（含 /tmp/memorystore-clean）
+  pids="$(pgrep -f 'memorystore-clean|[/]bin/memorystore' 2>/dev/null || true)"
   if [[ -z "$pids" ]]; then
     echo "MemoryStore 未在运行"
     exit 0
